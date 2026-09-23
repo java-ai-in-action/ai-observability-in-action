@@ -1,0 +1,51 @@
+# Prometheus 告警规则：AI 成本与可用性
+# 用法：挂到 Prometheus 的 rule_files，或转成 Grafana Alert
+
+groups:
+  - name: ai-finops
+    rules:
+      # 单用户 Token 用量突增 10 倍 —— 及早发现异常循环调用 / 密钥泄露
+      - alert: UserTokenSpike
+        expr: |
+          sum by (user) (rate(ai_tokens_input_total[5m]))
+            > 10 * sum by (user) (rate(ai_tokens_input_total[5m] offset 1h))
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "用户 {{ $labels.user }} Token 用量突增 10 倍"
+          description: "可能为异常循环调用或密钥泄露，请立即核查。"
+
+      # 全局 AI 日成本超过预算
+      - alert: GlobalCostBudgetExceeded
+        expr: |
+          sum(increase(ai_tokens_input_total[1d]) + increase(ai_tokens_output_total[1d])) * 0.002 / 1000 > 5000
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "全局 AI 日成本已超过预算 5000 元"
+
+      # 模型调用失败率过高
+      - alert: ModelCallFailureRateHigh
+        expr: |
+          sum(rate(ai_model_call_failed_total[5m]))
+            / sum(rate(ai_model_call_total[5m])) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "模型调用失败率超过 5%"
+
+      # 单位成本（每会话）异常上升
+      - alert: CostPerSessionRising
+        expr: |
+          sum(rate(ai_tokens_input_total[1h]))
+            / sum(rate(ai_session_total[1h]))
+            > 2 * (sum(rate(ai_tokens_input_total[1h] offset 1d))
+                 / sum(rate(ai_session_total[1h] offset 1d)))
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "每会话成本比昨日同期上涨超过 1 倍"
