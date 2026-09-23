@@ -1,0 +1,40 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: ai-observability-demo
+
+  # ---- 语义缓存 ----
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+
+  ai:
+    dashscope:
+      api-key: ${DASHSCOPE_API_KEY}
+
+# ---- 指标与链路追踪 ----
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  tracing:
+    sampling:
+      probability: 1.0          # 全量采样（生产按比例）
+  otlp:
+    tracing:
+      endpoint: ${OTLP_ENDPOINT:http://localhost:4318/v1/traces}   # 指向 Langfuse Collector
+
+# ---- 成本预算（生产建议放配置中心）----
+finops:
+  price-per-1k-tokens: 0.002
+  budget:
+    per-call: 0.5        # 单次请求上限（元）
+    user-daily: 50       # 单用户日上限
+    global-daily: 5000   # 全局日上限
