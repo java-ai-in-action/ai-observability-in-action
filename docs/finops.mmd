@@ -1,0 +1,14 @@
+graph TD
+    REQ([用户请求]) --> PRE[调用前: 成本预检]
+    PRE -->|超三级预算| REJECT([直接拒绝 / 降级])
+    PRE -->|通过| CACHE{语义缓存命中?}
+    CACHE -->|命中| HIT([直接返回缓存答案<br/>成本 = 0])
+    CACHE -->|未命中| CALL[调用模型]
+    CALL --> METRIC[上报 Token 指标<br/>tag: user/model/api]
+    CALL --> COST[记账: 单用户 + 全局]
+    METRIC --> BOARD[Grafana 看板]
+    COST --> BOARD
+    BOARD --> ALERT{是否异常突增?}
+    ALERT -->|是| NOTIFY([3 分钟内告警])
+    ALERT -->|否| DONE([正常])
+    CALL --> ANS([返回答案])
