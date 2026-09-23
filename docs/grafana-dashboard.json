@@ -1,0 +1,48 @@
+{
+  "title": "AI 成本监控看板",
+  "uid": "ai-finops",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "tags": ["ai", "finops"],
+  "panels": [
+    {
+      "id": 1,
+      "title": "实时 Token 流速",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "targets": [
+        {"expr": "sum(rate(ai_tokens_input_total[5m]))", "legendFormat": "输入 Token/s"},
+        {"expr": "sum(rate(ai_tokens_output_total[5m]))", "legendFormat": "输出 Token/s"}
+      ]
+    },
+    {
+      "id": 2,
+      "title": "烧钱榜前十（按用户）",
+      "type": "barchart",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "targets": [
+        {"expr": "topk(10, sum by (user) (increase(ai_tokens_input_total[24h]) + increase(ai_tokens_output_total[24h])))", "legendFormat": "{{user}}"}
+      ]
+    },
+    {
+      "id": 3,
+      "title": "成本趋势（按模型，单位：元/天）",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "targets": [
+        {"expr": "sum by (model) (increase(ai_tokens_input_total[1d]) + increase(ai_tokens_output_total[1d])) * 0.002 / 1000", "legendFormat": "{{model}}"}
+      ]
+    },
+    {
+      "id": 4,
+      "title": "异常告警（单用户突增）",
+      "type": "stat",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "targets": [
+        {"expr": "sum by (user) (rate(ai_tokens_input_total[5m])) > 10 * sum by (user) (rate(ai_tokens_input_total[5m] offset 1h))"}
+      ]
+    }
+  ]
+}
